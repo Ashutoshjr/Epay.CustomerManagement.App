@@ -1,10 +1,6 @@
 ﻿using CustomerManagement.Domain.Customers;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+//using Newtonsoft.Json;
 using System.Text.Json;
-using System.Threading.Tasks;
 
 namespace CustomerManagement.Infrastructure
 {
@@ -17,13 +13,21 @@ namespace CustomerManagement.Infrastructure
 
         public CustomerRepository()
         {
-            _filePath = "customers.json";
-            LoadCustomersFromJsonFileAsync().GetAwaiter().GetResult();
+            LoadCustomersFromJsonFileAsync().Wait();
         }
 
         public async Task<IEnumerable<Customer>> GetAllCustomers()
         {
-            return await Task.FromResult(_customers);
+            await _semaphore.WaitAsync();
+            try
+            {
+                // Return a copy of _customers to avoid external modifications
+                return _customers.ToList();
+            }
+            finally
+            {
+                _semaphore.Release();
+            }
         }
 
         public async Task AddCustomer(List<Customer> customers)
@@ -50,6 +54,8 @@ namespace CustomerManagement.Infrastructure
 
         private void InsertCustomerSorted(Customer customer)
         {
+            Task.Delay(1000);
+
             int index = 0;
             while (index < _customers.Count &&
                    String.Compare(customer.LastName, _customers[index].LastName, StringComparison.Ordinal) > 0)
@@ -70,28 +76,37 @@ namespace CustomerManagement.Infrastructure
 
         private async Task LoadCustomersFromJsonFileAsync()
         {
+            await Task.Delay(1000);
+
             using (var fileStream = new FileStream(_filePath, FileMode.OpenOrCreate, FileAccess.Read, FileShare.ReadWrite))
             {
                 var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
 
                 try
                 {
+
                     _customers = await JsonSerializer.DeserializeAsync<List<Customer>>(fileStream, options);
+
                 }
                 catch (JsonException)
                 {
                     _customers = new List<Customer>();
                 }
             }
+
+
         }
+
 
         private async Task SaveCustomersToJsonFileAsync()
         {
+
+            await Task.Delay(500);
             using (var fileStream = new FileStream(_filePath, FileMode.Create, FileAccess.Write, FileShare.ReadWrite))
             {
                 var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
 
-                await JsonSerializer.SerializeAsync(fileStream, _customers, options);
+                await System.Text.Json.JsonSerializer.SerializeAsync(fileStream, _customers, options);
             }
         }
     }

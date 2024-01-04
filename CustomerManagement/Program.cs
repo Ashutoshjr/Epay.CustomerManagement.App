@@ -1,9 +1,7 @@
-using AutoMapper;
 using CustomerManagement.API.Extension;
 using CustomerManagement.Application.Customers;
 using CustomerManagement.Domain.Customers;
 using CustomerManagement.Infrastructure;
-using Microsoft.OpenApi.Models;
 
 namespace CustomerManagement
 {
@@ -27,7 +25,7 @@ namespace CustomerManagement
 
 
 
-                builder.Services.AddScoped<ICustomerRepository, CustomerRepository>();
+                builder.Services.AddSingleton<ICustomerRepository, CustomerRepository>();
                 builder.Services.AddScoped<ICustomerService, CustomerService>();
             }
 
@@ -45,8 +43,8 @@ namespace CustomerManagement
 
                 app.UseDefaultFiles();
                 app.UseStaticFiles();
-               
-                
+
+
                 app.UseCors("MyPolicy");
 
                 app.MapControllers();

@@ -1,22 +1,20 @@
-﻿using AutoMapper;
-using CustomerManagement.Application.Customers;
-using CustomerManagement.Domain.Customers;
+﻿using CustomerManagement.Application.Customers;
 using Microsoft.AspNetCore.Mvc;
 
 namespace CustomerManagement.API.Controllers
 {
-    
+
     [Route("api/[controller]")]
     [ApiController]
     public class CustomerController : ControllerBase
     {
         private readonly ICustomerService _customerService;
-        
+
 
         public CustomerController(ICustomerService customerService)
         {
             _customerService = customerService;
-            
+
         }
 
         [HttpPost("addcustomers")]
@@ -39,7 +37,7 @@ namespace CustomerManagement.API.Controllers
             try
             {
                 IEnumerable<CustomerDto>? customers = await _customerService.GetAllCustomers();
-                
+
                 return Ok(customers);
             }
             catch (Exception ex)

@@ -1,4 +1,5 @@
 ﻿using CustomerManagement.Simulator.Customer;
+using Newtonsoft.Json;
 using System.Net.Http.Json;
 
 namespace CustomerManagement.Simulator
@@ -6,6 +7,7 @@ namespace CustomerManagement.Simulator
     public class Simulator
     {
         private readonly HttpClient _httpClient;
+        private readonly string _baseAddress = "https://localhost:7257/api/Customer/";
 
         public Simulator()
         {
@@ -22,30 +24,78 @@ namespace CustomerManagement.Simulator
         public async Task RunSimulation(int numberOfRequests)
         {
             // Generate a list of requests to be sent in parallel
-            var requests = GenerateRequests(numberOfRequests);
+            var postRequests = GeneratePostRequests(numberOfRequests);
+            var getRequests = GenerateGetRequests(numberOfRequests);
 
-            // Send requests in parallel
-            await Task.WhenAll(requests);
+            // Send POST and GET requests in parallel
+            await Task.WhenAll(postRequests);
+            await Task.WhenAll(getRequests);
 
-            Console.WriteLine("parallel execuation is complete ");
+            Console.WriteLine("Parallel execution is complete.");
         }
 
-        private List<Task> GenerateRequests(int numberOfRequests)
+
+        private IEnumerable<Task> GeneratePostRequests(int numberOfRequests)
         {
-            var requests = new List<Task>();
-
-            for (int i = 0; i < numberOfRequests; i++)
+            var tasks = Enumerable.Range(0, numberOfRequests).Select(async _ =>
             {
-                var customers = GenerateCustomers();
-                var postTask = SendPostRequest(customers);
-                var getTask = SendGetRequest();
+                using (var httpClient = new HttpClient())
+                {
+                    httpClient.BaseAddress = new Uri(_baseAddress);
+                    var customers = GenerateCustomers();
+                    await SendPostRequest(httpClient, customers);
+                }
+            });
 
-                requests.Add(postTask);
-                requests.Add(getTask);
-            }
-
-            return requests;
+            return tasks;
         }
+
+        private IEnumerable<Task> GenerateGetRequests(int numberOfRequests)
+        {
+            var tasks = Enumerable.Range(0, numberOfRequests).Select(async _ =>
+            {
+                using (var httpClient = new HttpClient())
+                {
+                    httpClient.BaseAddress = new Uri(_baseAddress);
+                    await SendGetRequest(httpClient);
+                }
+            });
+
+            return tasks;
+        }
+
+        //private List<Task> GeneratePostRequests(int numberOfRequests)
+        //{
+        //    var requests = new List<Task>();
+
+        //    for (int i = 0; i < numberOfRequests; i++)
+        //    {
+        //        var customers = GenerateCustomers();
+
+        //        // Start the POST request without waiting for its completion
+
+        //        var postTask = SendPostRequest(customers);
+
+
+        //        requests.Add(postTask);
+        //    }
+
+        //    return requests;
+        //}
+
+        //private List<Task> GenerateGetRequests(int numberOfRequests)
+        //{
+        //    var requests = new List<Task>();
+
+        //    for (int i = 0; i < numberOfRequests; i++)
+        //    {
+
+        //        var getTask = SendGetRequest();
+        //        requests.Add(getTask);
+        //    }
+
+        //    return requests;
+        //}
 
         private List<CustomerDto> GenerateCustomers()
         {
@@ -59,8 +109,8 @@ namespace CustomerManagement.Simulator
                 {
                     FirstName = GetRandomFirstName(),
                     LastName = GetRandomLastName(),
-                    Age = random.Next(10, 91), 
-                    Id = i + 1 
+                    Age = random.Next(10, 91),
+                    Id = i + 1
                 };
 
                 customers.Add(customer);
@@ -69,12 +119,21 @@ namespace CustomerManagement.Simulator
             return customers;
         }
 
-        private async Task SendPostRequest(List<CustomerDto> customers)
+        private async Task SendPostRequest(HttpClient httpClient, List<CustomerDto> customers)
         {
             try
             {
                 var response = await _httpClient.PostAsJsonAsync("addcustomers", customers);
                 response.EnsureSuccessStatusCode();
+
+                if (response.IsSuccessStatusCode)
+                {
+                    string responseContent = await response.Content.ReadAsStringAsync();
+
+
+                    Console.WriteLine(responseContent);
+                }
+
             }
             catch (Exception ex)
             {
@@ -83,14 +142,28 @@ namespace CustomerManagement.Simulator
             }
         }
 
-        private async Task SendGetRequest()
+
+
+
+        private async Task SendGetRequest(HttpClient httpClient)
         {
             try
             {
                 var response = await _httpClient.GetAsync("getcustomers");
                 response.EnsureSuccessStatusCode();
+
+                if (response.IsSuccessStatusCode)
+                {
+                    string responseContent = await response.Content.ReadAsStringAsync();
+                    var exchangeRates = JsonConvert.DeserializeObject<List<CustomerDto>>(responseContent);
+
+
+                    Console.WriteLine(exchangeRates?.Count);
+                }
+
+
             }
-            catch (Exception)
+            catch (Exception ex)
             {
 
                 throw;
